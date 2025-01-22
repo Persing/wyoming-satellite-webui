@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wyoming Satellite Configuration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Load status on page load
+            loadStatus();
+
+            // Run setup script
+            $("#run-setup").click(function() {
+                // Clear the console output area
+                $("#console-output").text("Running setup script...\n");
+
+                // Open an EventSource connection to stream the script output
+                const eventSource = new EventSource("/run_setup");
+                eventSource.onmessage = function(event) {
+                    $("#console-output").append(event.data);
+                    // Scroll to the bottom of the console output area
+                    $("#console-output").scrollTop($("#console-output")[0].scrollHeight);
+                };
+                eventSource.onerror = function() {
+                    eventSource.close();
+                };
+            });
+
+            // Refresh status
+            $("#refresh-status").click(function() {
+                loadStatus();
+            });
+        });
+
+        function loadStatus() {
+            $.get("/status", function(data) {
+                $("#status-wyoming").text(data.wyoming_satellite).removeClass().addClass("status " + getStatusClass(data.wyoming_satellite));
+                $("#status-wakeword").text(data.wake_word_service).removeClass().addClass("status " + getStatusClass(data.wake_word_service));
+                $("#status-webportal").text(data.web_portal).removeClass().addClass("status " + getStatusClass(data.web_portal));
+            });
+        }
+
+        function getStatusClass(status) {
+            if (status === "active") return "status-active";
+            if (status === "inactive") return "status-inactive";
+            return "status-error";
+        }
+    </script>
+</head>
+<body>
+    <h1>Wyoming Satellite Configuration</h1>
+    <form action="/configure" method="post">
+        <label for="wake_word">Wake Word:</label>
+        <input type="text" id="wake_word" name="wake_word" value="{{ config.get('wake_word', 'ok_nabu') }}"><br><br>
+
+        <label for="mic_gain">Microphone Gain (0-31):</label>
+        <input type="number" id="mic_gain" name="mic_gain" value="{{ config.get('mic_gain', '5') }}"><br><br>
+
+        <label for="noise_suppression">Noise Suppression (0-4):</label>
+        <input type="number" id="noise_suppression" name="noise_suppression" value="{{ config.get('noise_suppression', '2') }}"><br><br>
+
+        <label for="wake_uri">Wake Word Detection URI:</label>
+        <input type="text" id="wake_uri" name="wake_uri" value="{{ config.get('wake_uri', 'tcp://0.0.0.0:10400') }}"><br><br>
+
+        <label for="mic_command">Microphone Command:</label>
+        <input type="text" id="mic_command" name="mic_command" value="{{ config.get('mic_command', 'arecord -r 16000 -c 1 -f S16_LE -t raw') }}"><br><br>
+
+        <label for="snd_command">Sound Command:</label>
+        <input type="text" id="snd_command" name="snd_command" value="{{ config.get('snd_command', 'aplay -r 22050 -c 1 -f S16_LE -t raw') }}"><br><br>
+
+        <input type="submit" value="Save and Restart">
+    </form>
+
+    <h2>Setup</h2>
+    <button id="run-setup">Run Setup Script</button>
+
+    <h2>Console Output</h2>
+    <pre id="console-output" style="background: #000; color: #fff; padding: 10px; height: 200px; overflow-y: scroll;"></pre>
+
+    <h2>Status</h2>
+    <button id="refresh-status">Refresh Status</button>
+    <ul>
+        <li>Wyoming Satellite: <span id="status-wyoming" class="status">loading...</span></li>
+        <li>Wake Word Service: <span id="status-wakeword" class="status">loading...</span></li>
+        <li>Web Portal: <span id="status-webportal" class="status">loading...</span></li>
+    </ul>
+</body>
+</html>

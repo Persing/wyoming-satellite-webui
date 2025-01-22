@@ -1,0 +1,4 @@
+wake_word: ok_nabu
+mic_gain: 5
+noise_suppression: 2
+wake_uri: tcp://0.0.0.0:10400
